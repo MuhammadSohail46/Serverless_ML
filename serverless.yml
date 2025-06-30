@@ -1,0 +1,52 @@
+service: agri-pulse-ndvi-alert
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.11
+  region: us-east-1
+  memorySize: 512
+  timeout: 60
+  environment:
+    BUCKET_NAME: ndvi-agri-input
+    NDVI_THRESHOLD: 0.4
+    SNS_TOPIC_ARN: arn:aws:sns:us-east-1:123456789012:ndvi-alerts  # <-- Replace with your actual SNS ARN
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:ListBucket
+          Resource:
+            - arn:aws:s3:::ndvi-agri-input
+            - arn:aws:s3:::ndvi-agri-input/*
+        - Effect: Allow
+          Action:
+            - sns:Publish
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - logs:*
+            - cloudwatch:*
+          Resource: "*"
+
+functions:
+  fetchSatelliteData:
+    handler: fetch_satellite_data.lambda_handler
+    events:
+      - schedule:
+          rate: rate(1 day)
+          enabled: true
+
+  ndviAnalyzer:
+    handler: ndvi_analyzer.lambda_handler
+    events:
+      - s3:
+          bucket: ndvi-agri-input
+          event: s3:ObjectCreated:*
+          rules:
+            - suffix: .tif
