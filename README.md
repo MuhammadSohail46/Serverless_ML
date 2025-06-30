@@ -74,24 +74,20 @@ You should see `.tif` files appear in your S3 bucket. These will trigger the NDV
 ├── README.md                 # You're here!
 ```
 
----
-
-## 📷 Sample Image
-
-*Field boundary used for STAC search and band clipping:*
-
-![Field Polygon Example](your-uploaded-image.png)
 
 ---
 
-## ✅ Deployment Notes
+## ✅ How AgriPulse Uses AWS Lambda
 
-- Sentinel-2 imagery is fetched via [Earth Search STAC API](https://earth-search.aws.element84.com/v1).
-- You must create and subscribe to an SNS topic to receive alerts.
-- NDVI is computed as:
-  \[
-  NDVI = rac{NIR - RED}{NIR + RED + \epsilon}
-  \]
+AWS Lambda is the core execution engine in AgriPulse. Two Lambda functions power the entire pipeline:
+
+1. **fetch_satellite_data.py**:  
+   Triggered daily by Amazon EventBridge, this Lambda fetches recent Sentinel-2 satellite imagery using the STAC API, selects the appropriate Red and NIR bands, and uploads them to Amazon S3. This function automates satellite data acquisition for the defined field polygon.
+
+2. **ndvi_analyzer.py**:  
+   Triggered automatically by S3 when new `.tif` files are uploaded. It downloads the Red and NIR bands, computes NDVI using rasterio and numpy, and sends an alert via Amazon SNS if the average NDVI indicates possible crop stress. This Lambda ensures near real-time crop monitoring and alerting.
+
+By using AWS Lambda, AgriPulse remains fully serverless, cost-effective, and scalable without needing any EC2 instances or persistent infrastructure.
 
 ---
 
